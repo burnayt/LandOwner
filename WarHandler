@@ -1,0 +1,86 @@
+using UnityEngine;
+using System.Collections;
+
+public class WarHandler : MonoBehaviour
+{
+    [HideInInspector]
+    public Land land;
+
+    public WarHandler[] targets;
+
+    //public Slider warSlider;
+
+    private class AttackInfo
+    {
+        public AttackInfo(WarHandler newTarget, int amount)
+        {
+            target = newTarget;
+            soldiersSend = amount;
+        }
+        public WarHandler target;
+        public int soldiersSend;
+    }
+
+    private PlayersController playersController;
+
+	// Use this for initialization
+	void Start ()
+    {
+        land = GetComponent<Land>();
+        playersController = GameObject.Find("PlayersController").GetComponent<PlayersController>();
+	}
+	
+	// Update is called once per frame
+	void Update ()
+    {
+	
+	}
+
+    public void StartAttack(int targetNumber, int soldiersSend)
+    {
+        WarHandler targ = targets[targetNumber]; //Цель атаки
+        //int soldiersSend = Mathf.RoundToInt(warSlider.value);
+        //warSlider.value = 0;
+        land.RemoveSoldiers(soldiersSend);
+        StartCoroutine("WaitingForArmyArrive", new AttackInfo ( targ,  soldiersSend) );
+    }
+
+    IEnumerator WaitingForArmyArrive (AttackInfo info)
+    {
+        
+        yield return new WaitForSeconds(1f);
+        FinishAttack(info);
+    }
+
+    private void FinishAttack ( AttackInfo info )
+    {
+        //Выживших солдат заплюсовать, солдат противника отнять;
+        if ( playersController.FindOwnerByLand ( land ) == playersController.FindOwnerByLand ( info.target.land ) )
+        {
+            //Если земля уже наша, просто сложить солдат и выйти
+            info.target.land.HireSoldiers(info.soldiersSend);
+            return;
+        }
+
+        //Debug.Log(info.target + " " +  info.soldiersSend);
+        if ( info.soldiersSend > info.target.land.soldiers )
+        {
+            //Захват земли
+            //Выживших солдат атаковавшего заплюсовать, солдат противника занулить;
+            int soldiersLeft = info.soldiersSend - info.target.land.soldiers;
+            info.target.land.RemoveSoldiers(info.target.land.soldiers);
+            info.target.land.HireSoldiers(soldiersLeft);
+            playersController.ChangeLandowner(info.target, this, info.target.land); // "СМЕНА ВЛАДЕЛЬЦА ЗЕМЛИ"
+        }
+        else
+        {
+            info.target.land.RemoveSoldiers(info.soldiersSend);
+        }
+
+    }
+
+    public void SendWarning (WarHandler attacker, WarHandler defender)
+    {
+
+    }
+}
